@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ur Flight Mate - Book Your Trip</title>
-    <!-- 1. We will use Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 2. Import the Inter font for a cleaner look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -67,20 +65,16 @@
 </head>
 <body class="bg-gray-100 leading-normal tracking-normal">
 
-    <!-- ===== NAVIGATION BAR ===== -->
     <nav class="bg-white p-4 shadow-md sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-3xl font-bold text-indigo-600 cursor-pointer" onclick="showView('search-view')">Ur Flight Mate</h1>
             
-            <!-- Navigation Links -->
             <div class="space-x-4 flex items-center">
-                <!-- Links for Logged-IN users -->
                 <button class="logged-in text-lg font-medium text-gray-700 hover:text-indigo-600" onclick="showView('search-view')">Book</button>
                 <button class="logged-in text-lg font-medium text-gray-700 hover:text-indigo-600" onclick="showView('my-flights-view')">Your Flights</button>
                 <span id="nav-user-name" class="logged-in text-gray-500"></span>
                 <button class="logged-in text-lg font-medium text-indigo-600 hover:text-indigo-800" onclick="logoutUser()">Logout</button>
                 
-                <!-- Links for Logged-OUT users -->
                 <button class="logged-out text-lg font-medium text-gray-700 hover:text-indigo-600" onclick="showView('login-view')">Login</button>
                 <button class="logged-out text-lg font-medium bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700" onclick="showView('signup-view')">Sign Up</button>
             </div>
@@ -89,17 +83,13 @@
 
     <main class="container mx-auto p-4 mt-8">
 
-        <!-- ===== VIEW 1: SEARCH (HOME) ===== -->
         <div id="search-view" class="app-view">
-            <!-- Hero Section -->
             <div class="bg-indigo-700 text-white rounded-lg shadow-lg p-8 md:p-12 mb-8">
                 <h2 class="text-4xl font-bold mb-4">Book Your Next Flight</h2>
                 <p class="text-xl text-indigo-200 mb-6">Find the best deals with our real-time dynamic pricing engine.</p>
-                <!-- Search Form (embedded) -->
                 <div class="bg-white p-6 rounded-lg shadow-lg">
                     <form id="search-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         
-                        <!-- --- NEW: Origin Dropdown --- -->
                         <div>
                             <label for="origin-select" class="block text-sm font-medium text-gray-700">Origin</label>
                             <select id="origin-select" name="origin" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900" required>
@@ -107,7 +97,6 @@
                             </select>
                         </div>
                         
-                        <!-- --- NEW: Destination Dropdown --- -->
                         <div>
                             <label for="destination-select" class="block text-sm font-medium text-gray-700">Destination</label>
                             <select id="destination-select" name="destination" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900" required>
@@ -129,20 +118,16 @@
             </div>
         </div>
 
-        <!-- ===== VIEW 2: FLIGHT RESULTS ===== -->
         <div id="results-view" class="app-view">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-3xl font-semibold">Search Results</h2>
                 <button onclick="showView('search-view')" class="text-indigo-600 hover:text-indigo-800 font-medium">&larr; Back to Search</button>
             </div>
             <div id="results-list" class="space-y-4">
-                <!-- Flight results will be injected here by JavaScript -->
-            </div>
-            <!-- --- NEW: Improved Message --- -->
+                </div>
             <div id="results-message" class="empty-message"></div>
         </div>
 
-        <!-- ===== VIEW 3: BOOKING CONFIRMATION ===== -->
         <div id="confirmation-view" class="app-view">
             <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-8 rounded-lg shadow-lg">
                 <h2 class="text-3xl font-semibold mb-2">Booking Confirmed!</h2>
@@ -156,9 +141,7 @@
             </div>
         </div>
         
-        <!-- ===== NEW VIEW: LOGIN ===== -->
         <div id="login-view" class="app-view">
-            <!-- --- NEW: Session Expiration Message --- -->
             <div id="session-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 max-w-lg mx-auto"></div>
             
             <div class="bg-white p-8 rounded-lg shadow-lg max-w-lg mx-auto">
@@ -186,7 +169,6 @@
             </div>
         </div>
         
-        <!-- ===== NEW VIEW: SIGN UP ===== -->
         <div id="signup-view" class="app-view">
             <div class="bg-white p-8 rounded-lg shadow-lg max-w-lg mx-auto">
                 <h2 class="text-3xl font-semibold mb-6 text-center">Create Your Account</h2>
@@ -218,13 +200,10 @@
             </div>
         </div>
 
-        <!-- ===== NEW VIEW: MY FLIGHTS (replaces Manage Booking) ===== -->
         <div id="my-flights-view" class="app-view">
             <h2 class="text-3xl font-semibold mb-6">Your Booked Flights</h2>
             <div id="my-flights-list" class="space-y-4">
-                <!-- User's bookings will be injected here -->
-            </div>
-            <!-- --- NEW: Improved Message --- -->
+                </div>
             <div id="my-flights-message" class="empty-message"></div>
         </div>
     </main>
@@ -233,7 +212,6 @@
         &copy; 2025 Ur Flight Mate. All rights reserved.
     </footer>
 
-    <!-- ===== MODAL 1: BOOKING POPUP (Simpler) ===== -->
     <div id="booking-modal" class="modal">
         <div class="modal-content bg-white p-6 rounded-lg shadow-lg max-w-lg mx-auto mt-20">
             <div class="flex justify-between items-center mb-4">
@@ -252,7 +230,6 @@
             <form id="booking-form">
                 <input type="hidden" id="modal-flight-id">
                 <div class="space-y-4">
-                    <!-- --- UPDATED: Seat Dropdown Menu --- -->
                     <div>
                         <label for="seat-select" class="block text-sm font-medium text-gray-700">Select Seat</label>
                         <select id="seat-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900" required>
@@ -269,7 +246,6 @@
         </div>
     </div>
 
-    <!-- ===== MODAL 2: MANAGE BOOKING (for 'My Flights') ===== -->
     <div id="manage-modal" class="modal">
         <div class="modal-content bg-white p-6 rounded-lg shadow-lg max-w-lg mx-auto mt-20">
             <div class="flex justify-between items-center mb-4">
@@ -278,13 +254,12 @@
             </div>
             
             <div id="manage-modal-body" class="space-y-3">
-                <!-- Booking details will be injected here -->
-            </div>
+                </div>
 
             <div id="manage-modal-error" class="hidden text-red-600 text-sm mt-4"></div>
             <div id="manage-modal-success" class="hidden text-green-600 text-sm mt-4"></div>
 
-            <div class_id="manage-modal-actions" class="mt-6 flex space-x-4">
+            <div id="manage-modal-actions" class="mt-6 flex space-x-4">
                  <button id="cancel-booking-btn" class="w-full bg-red-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-red-700">
                     Cancel Booking
                 </button>
@@ -296,7 +271,6 @@
     </div>
 
 
-    <!-- ===== JAVASCRIPT LOGIC ===== -->
     <script>
         // --- Globals ---
         const API_BASE_URL = 'http://127.0.0.1:5000';
@@ -644,7 +618,6 @@
                         </div>
                         <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
                             <div class="text-center md:text-right">
-                                <!-- --- UPDATED: Added "Current Fare" label for clarity --- -->
                                 <p class="text-2xl font-bold text-indigo-600">$${flight.dynamic_price} <span class="text-xs font-normal text-indigo-400">Current Fare</span></p>
                                 <p class="text-sm text-gray-500 line-through">$${flight.base_price} (Base)</p>
                                 <p class="text-sm font-medium ${flight.seats_available < 20 ? 'text-red-600' : 'text-green-600'}">
@@ -770,7 +743,7 @@
                         errorMessage = `Booking Failed: ${errorData.error || responseText}`;
                     } catch (jsonError) {
                         // If it's not JSON, it's probably a server crash page
-                        errorMessage = `Booking Failed: Server Error (Status ${response.status}). Is app.py running?`;
+                        errorMessage = `Booking Failed: Server Error (Status ${response.status} - ${response.statusText}). Is app.py running?`;
                         console.error("Server returned non-JSON error:", responseText);
                     }
                     

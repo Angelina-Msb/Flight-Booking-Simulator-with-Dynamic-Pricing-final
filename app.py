@@ -1,71 +1,201 @@
 from flask import Flask, jsonify, request
-# --- NEW IMPORTS ---
+from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-# --- UPDATED MODEL IMPORT ---
-from models import db, Flight, Booking, User
-from datetime import datetime, timedelta
+
+from models import db, Flight, Booking, User # <-- Updated: Import new models
 from pricing import calculate_dynamic_price
-from flask_cors import CORS
+from datetime import datetime, timedelta
 import random
 import string
+import time # For the simulator
 
-# 1. Create the Flask app
+# Create the Flask app
 app = Flask(__name__)
-# Add CORS support
-CORS(app)
 
-# 2. Configure the database
+# --- Configuration ---
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///flights.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = 'super-secret-key-for-ur-flight-mate' # Change this in a real app!
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=1) # Tokens expire after 1 hour
 
-# --- 3. NEW: Configure Security ---
-# A secret key for JWT (change this in production)
-app.config["JWT_SECRET_KEY"] = "your-super-secret-key-for-jwt"
-# Initialize extensions
+# --- Initialization ---
+db.init_app(app)
+CORS(app) # Allow frontend (on port 5500) to talk to backend (on port 5000)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
-# 4. Initialize the database with our app
-db.init_app(app)
+# --- FIX for "Subject must be a string" error ---
+# This tells JWTManager how to get the user ID (the 'identity') for the token
+@jwt.user_identity_loader
+def user_identity_lookup(user):
+    return user.id
+# ---------------------------------------------------
 
-# 5. A simple 'test route'
+
+# --- Helper Functions ---
+
+def generate_pnr():
+    """Generates a random 6-character PNR."""
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choice(chars) for _ in range(6))
+
+def flight_to_dict(flight):
+    """Converts a Flight object to a dictionary for JSON response."""
+    return {
+        "id": flight.id,
+        "flight_number": flight.flight_number,
+        "origin": flight.origin,
+        "destination": flight.destination,
+        "departure_time": flight.departure_time.isoformat(),
+        "arrival_time": flight.arrival_time.isoformat(),
+        "base_price": flight.base_price,
+        "dynamic_price": calculate_dynamic_price(flight), # Dynamic price calculation here
+        "seats_available": flight.seats_available
+    }
+
+def booking_to_dict(booking):
+    """Converts a Booking object to a dictionary for JSON response."""
+    return {
+        "pnr": booking.pnr,
+        "status": booking.status,
+        "passenger_name": booking.passenger_name,
+        "passenger_email": booking.passenger_email,
+        "price_paid": booking.price_paid,
+        "seat_number": booking.seat_number,
+        "booking_time": booking.booking_time.isoformat(),
+        
+        # Flight details are included for context
+        "flight_number": booking.flight.flight_number,
+        "origin": booking.flight.origin,
+        "destination": booking.flight.destination,
+        "departure_time": booking.flight.departure_time.isoformat(),
+    }
+
+def generate_and_add_flight(origin, destination, date_str):
+    """Generates a new, realistic flight and adds it to the database."""
+    try:
+        search_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return None # Invalid date format
+
+    # Ensure the date is not in the past
+    if search_date < datetime.now().date():
+        search_date = datetime.now().date() + timedelta(days=1)
+    
+    # Simple logic for determining flight time/duration based on route
+    # Time window for departure (e.g., 9 AM to 5 PM)
+    dep_hour = random.randint(9, 17)
+    dep_minute = random.choice([0, 30])
+    
+    departure_dt = datetime(search_date.year, search_date.month, search_date.day, dep_hour, dep_minute, 0)
+    
+    # Determine base duration (3 to 6 hours)
+    duration_hours = random.randint(3, 6)
+    arrival_dt = departure_dt + timedelta(hours=duration_hours, minutes=random.randint(0, 59))
+    
+    # Determine base price based on duration
+    base_price = round(200 + duration_hours * 50 + random.randint(10, 50), 2)
+    
+    total_seats = 150 # Standard plane size
+    
+    new_flight = Flight(
+        flight_number=f"{random.choice(['UR', 'FM', 'FL'])}{random.randint(100, 999)}",
+        origin=origin,
+        destination=destination,
+        departure_time=departure_dt,
+        arrival_time=arrival_dt,
+        base_price=base_price,
+        total_seats=total_seats,
+        seats_available=total_seats
+    )
+    
+    db.session.add(new_flight)
+    db.session.commit()
+    return new_flight
+
+
+# --- Core Routes ---
+
 @app.route('/')
 def home():
     return "Welcome to the Ur Flight Mate Simulator!"
 
-# --- Helper Function ---
-def generate_pnr():
-    """Generates a unique 6-character PNR."""
-    while True:
-        pnr = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        existing = Booking.query.filter_by(pnr=pnr).first()
-        if not existing:
-            return pnr
 
-# --- 6. NEW: AUTHENTICATION API ENDPOINTS ---
+@app.route('/api/flights/search', methods=['GET'])
+def search_flights():
+    """
+    API endpoint to search for flights. Auto-generates a flight if none is found.
+    """
+    try:
+        origin = request.args.get('origin')
+        destination = request.args.get('destination')
+        date_str = request.args.get('date')
+        
+        if not all([origin, destination, date_str]):
+            return jsonify({
+                "error": "Missing required parameters: origin, destination, and date (YYYY-MM-DD)."
+            }), 400
+
+        try:
+            search_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({"error": "Invalid date format. Please use YYYY-MM-DD."}), 400
+
+        # Build the database query
+        query = Flight.query.filter(
+            Flight.origin.ilike(f"%{origin}%"),
+            Flight.destination.ilike(f"%{destination}%"),
+            db.func.date(Flight.departure_time) == search_date
+        )
+
+        # Default sort by price
+        query = query.order_by(Flight.base_price)
+        flights_list = query.all()
+
+        # --- NEW LOGIC: AUTO-GENERATE FLIGHT if none is found ---
+        if not flights_list:
+            # Generate one flight for this route and add it to the list
+            new_flight = generate_and_add_flight(origin, destination, date_str)
+            if new_flight:
+                flights_list.append(new_flight)
+        
+        # --- Final formatting ---
+        if not flights_list:
+             return jsonify({"message": "No flights found, and auto-generation failed."}), 404
+
+        results = [flight_to_dict(f) for f in flights_list]
+
+        return jsonify(results), 200
+
+    except Exception as e:
+        # Rollback in case the flight generation failed
+        db.session.rollback()
+        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
+
+
+# --- Authentication Routes (New Milestone) ---
 
 @app.route('/api/auth/signup', methods=['POST'])
 def signup():
-    """API endpoint for user registration."""
     data = request.get_json()
-    if not data or not data.get('email') or not data.get('password') or not data.get('name'):
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not all([name, email, password]):
         return jsonify({"error": "Missing name, email, or password"}), 400
 
     # Check if user already exists
-    existing_user = User.query.filter_by(email=data['email']).first()
-    if existing_user:
-        return jsonify({"error": "Email already exists"}), 409 # 409 = Conflict
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "User with this email already exists"}), 409
 
     # Hash the password
-    hashed_password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
     
-    # Create new user
-    new_user = User(
-        email=data['email'],
-        name=data['name'],
-        password_hash=hashed_password
-    )
+    # Create the new user
+    new_user = User(name=name, email=email, password_hash=hashed_password)
     
     try:
         db.session.add(new_user)
@@ -73,247 +203,174 @@ def signup():
         return jsonify({"message": "User created successfully"}), 201
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Database error during signup: {str(e)}"}), 500
+
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    """API endpoint for user login."""
     data = request.get_json()
-    if not data or not data.get('email') or not data.get('password'):
-        return jsonify({"error": "Missing email or password"}), 400
+    email = data.get('email')
+    password = data.get('password')
 
-    user = User.query.filter_by(email=data['email']).first()
+    user = User.query.filter_by(email=email).first()
 
-    # Check if user exists and password is correct
-    if user and bcrypt.check_password_hash(user.password_hash, data['password']):
-        # Create a new token
-        access_token = create_access_token(identity=user.id)
+    if user and bcrypt.check_password_hash(user.password_hash, password):
+        # Create an access token using the user's ID as the identity
+        access_token = create_access_token(identity=user)
+        
+        # Return the token and basic user info
         return jsonify({
-            "message": "Login successful",
             "access_token": access_token,
-            "user": {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email
-            }
+            "user": {"id": user.id, "name": user.name, "email": user.email}
         }), 200
     else:
-        return jsonify({"error": "Invalid credentials"}), 401 # 401 = Unauthorized
+        return jsonify({"error": "Invalid email or password"}), 401
 
-# --- 7. FLIGHT SEARCH API (Unchanged) ---
-# This remains public, anyone can search flights.
 
-@app.route('/api/flights', methods=['GET'])
-def get_all_flights():
-    try:
-        flights_list = Flight.query.all()
-        results = []
-        for flight in flights_list:
-            current_price = calculate_dynamic_price(flight)
-            results.append({
-                "id": flight.id, "flight_number": flight.flight_number, "origin": flight.origin,
-                "destination": flight.destination, "departure_time": flight.departure_time.isoformat(),
-                "arrival_time": flight.arrival_time.isoformat(), "base_price": flight.base_price,
-                "dynamic_price": current_price, "seats_available": flight.seats_available
-            })
-        return jsonify(results), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/flights/search', methods=['GET'])
-def search_flights():
-    try:
-        origin = request.args.get('origin')
-        destination = request.args.get('destination')
-        date_str = request.args.get('date')
-        if not all([origin, destination, date_str]):
-            return jsonify({"error": "Missing required parameters."}), 400
-        search_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-
-        query = Flight.query.filter(
-            Flight.origin.ilike(f"%{origin}%"),
-            Flight.destination.ilike(f"%{destination}%"),
-            db.func.date(Flight.departure_time) == search_date
-        )
-        sort_by = request.args.get('sort_by', 'price')
-        if sort_by == 'duration':
-            query = query.order_by(Flight.arrival_time - Flight.departure_time)
-        else:
-            query = query.order_by(Flight.base_price)
-
-        flights_list = query.all()
-
-        if not flights_list and origin and destination and search_date:
-            try:
-                departure_time = datetime.combine(search_date, datetime.min.time()) + timedelta(hours=random.randint(8, 20), minutes=random.choice([0, 15, 30, 45]))
-                arrival_time = departure_time + timedelta(hours=random.randint(2, 6), minutes=random.randint(0, 59))
-                new_flight = Flight(
-                    flight_number=''.join(random.choices(string.ascii_uppercase, k=2)) + str(random.randint(100, 999)),
-                    origin=origin, destination=destination, departure_time=departure_time,
-                    arrival_time=arrival_time, base_price=round(random.uniform(150.0, 450.0), 2),
-                    total_seats=random.choice([120, 150, 180]), seats_available=random.choice([120, 150, 180])
-                )
-                db.session.add(new_flight)
-                db.session.commit()
-                flights_list = [new_flight]
-            except Exception as e:
-                db.session.rollback()
-                return jsonify({"error": f"Could not generate a new flight: {e}"}), 500
-
-        results = []
-        for flight in flights_list:
-            current_price = calculate_dynamic_price(flight)
-            results.append({
-                "id": flight.id, "flight_number": flight.flight_number, "origin": flight.origin,
-                "destination": flight.destination, "departure_time": flight.departure_time.isoformat(),
-                "arrival_time": flight.arrival_time.isoformat(), "base_price": flight.base_price,
-                "dynamic_price": current_price, "seats_available": flight.seats_available
-            })
-        return jsonify(results), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# --- 8. BOOKING API ENDPOINTS (NOW SECURED) ---
+# --- Booking Routes (Protected) ---
 
 @app.route('/api/bookings/create', methods=['POST'])
-@jwt_required() # <-- SECURED
+@jwt_required()
 def create_booking():
-    """ API endpoint to create a new booking. Must be logged in. """
+    # Get the user ID from the JWT token
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
     data = request.get_json()
-    
-    # Get user ID from the login token
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    flight_id = data.get('flight_id')
+    seat_number = data.get('seat_number')
 
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
-    if not data or not data.get('flight_id') or not data.get('seat_number'):
+    if not all([flight_id, seat_number]):
         return jsonify({"error": "Missing flight_id or seat_number"}), 400
 
+    # Ensure this entire operation is atomic (safe from concurrency issues)
     try:
-        flight = Flight.query.with_for_update().get(data['flight_id'])
-        if not flight:
-            return jsonify({"error": "Flight not found."}), 404
-        if flight.seats_available <= 0:
-            return jsonify({"error": "This flight is sold out."}), 400
+        flight = Flight.query.get(flight_id)
 
-        final_price = calculate_dynamic_price(flight)
+        if not flight:
+            return jsonify({"error": "Flight not found"}), 404
         
+        if flight.seats_available <= 0:
+            return jsonify({"error": "Flight is fully booked"}), 409 # Conflict
+
+        # 1. Update the Flight's seat count
+        flight.seats_available -= 1
+        
+        # 2. Calculate the final price (concurrency safety)
+        final_price = calculate_dynamic_price(flight)
+
+        # 3. Create the unique PNR
+        pnr_code = generate_pnr()
+        
+        # 4. Create the Booking record
         new_booking = Booking(
-            flight_id=flight.id,
-            user_id=current_user_id, # <-- Link to user
-            # Use the user's name/email from their profile
-            passenger_name=user.name,
-            passenger_email=user.email,
-            seat_number=data['seat_number'],
-            pnr=generate_pnr(),
+            user_id=user.id, # Link the user ID
+            flight_id=flight_id,
+            passenger_name=user.name, # Use logged-in user's name
+            passenger_email=user.email, # Use logged-in user's email
+            pnr=pnr_code,
+            seat_number=seat_number,
             price_paid=final_price,
             status='CONFIRMED'
         )
 
-        flight.seats_available -= 1
         db.session.add(new_booking)
         db.session.commit()
-
+        
         return jsonify({
             "message": "Booking successful!",
-            "booking": {
-                "pnr": new_booking.pnr, "flight_number": flight.flight_number,
-                "passenger_name": new_booking.passenger_name, "status": new_booking.status,
-                "booking_time": new_booking.booking_time.isoformat()
-            }
+            "booking": booking_to_dict(new_booking)
         }), 201
+
     except Exception as e:
+        # If anything fails, rollback the entire transaction (including seat count change)
         db.session.rollback()
-        return jsonify({"error": f"Booking failed: {e}"}), 500
+        return jsonify({"error": f"Booking failed due to a concurrency error or internal issue: {str(e)}"}), 500
+
 
 @app.route('/api/bookings/my-bookings', methods=['GET'])
-@jwt_required() # <-- SECURED
-def get_my_bookings():
-    """ API endpoint to retrieve all bookings for the logged-in user. """
-    current_user_id = get_jwt_identity()
+@jwt_required()
+def get_user_bookings():
+    """Retrieve all confirmed bookings for the logged-in user."""
+    user_id = get_jwt_identity()
+    
     try:
-        bookings = Booking.query.filter_by(user_id=current_user_id).order_by(Booking.booking_time.desc()).all()
-        results = []
-        for booking in bookings:
-            results.append({
-                "pnr": booking.pnr, "status": booking.status,
-                "passenger_name": booking.passenger_name, "seat_number": booking.seat_number,
-                "price_paid": booking.price_paid, "booking_time": booking.booking_time.isoformat(),
-                "flight_number": booking.flight.flight_number, "origin": booking.flight.origin,
-                "destination": booking.flight.destination, "departure_time": booking.flight.departure_time.isoformat()
-            })
+        bookings = Booking.query.filter_by(user_id=user_id).all()
+        
+        if not bookings:
+            return jsonify({"message": "No bookings found for this user."}), 200 # 200 is fine for an empty list
+        
+        results = [booking_to_dict(b) for b in bookings]
         return jsonify(results), 200
+    
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 
 
 @app.route('/api/bookings/<pnr>', methods=['GET'])
-@jwt_required() # <-- SECURED
+@jwt_required()
 def get_booking_by_pnr(pnr):
-    """ API endpoint to retrieve a specific booking by PNR.
-        Ensures the booking belongs to the logged-in user. """
-    current_user_id = get_jwt_identity()
+    """Retrieve a specific booking by PNR, ensuring it belongs to the logged-in user."""
+    user_id = get_jwt_identity()
+    
     try:
-        # User can only get their *own* booking
-        booking = Booking.query.filter_by(pnr=pnr, user_id=current_user_id).first()
+        booking = Booking.query.filter_by(pnr=pnr, user_id=user_id).first()
+
         if not booking:
-            return jsonify({"error": "Booking not found or you do not have permission."}), 404
-        
-        return jsonify({
-            "pnr": booking.pnr, "status": booking.status, "passenger_name": booking.passenger_name,
-            "passenger_email": booking.passenger_email, "seat_number": booking.seat_number,
-            "price_paid": booking.price_paid, "booking_time": booking.booking_time.isoformat(),
-            "flight_number": booking.flight.flight_number, "origin": booking.flight.origin,
-            "destination": booking.flight.destination, "departure_time": booking.flight.departure_time.isoformat()
-        }), 200
+            # Return 404/403: Booking not found or does not belong to user
+            return jsonify({"error": "Booking not found or access denied."}), 404
+
+        return jsonify(booking_to_dict(booking)), 200
+    
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
 
 
 @app.route('/api/bookings/<pnr>/cancel', methods=['POST'])
-@jwt_required() # <-- SECURED
+@jwt_required()
 def cancel_booking(pnr):
-    """ API endpoint to cancel a booking.
-        Ensures the booking belongs to the logged-in user. """
-    current_user_id = get_jwt_identity()
+    """Cancels a booking, marks the status, and returns the seat to the flight."""
+    user_id = get_jwt_identity()
+
     try:
-        # User can only cancel their *own* booking
-        booking = Booking.query.with_for_update().filter_by(pnr=pnr, user_id=current_user_id).first()
+        booking = Booking.query.filter_by(pnr=pnr, user_id=user_id).first()
 
         if not booking:
-            return jsonify({"error": "Booking not found or you do not have permission."}), 404
+            return jsonify({"error": "Booking not found or access denied."}), 404
+
         if booking.status == 'CANCELLED':
-            return jsonify({"error": "This booking is already cancelled."}), 400
+            return jsonify({"error": "Booking is already cancelled."}), 409
+        
+        # Start Transaction
+        flight = Flight.query.get(booking.flight_id)
 
-        flight = Flight.query.with_for_update().get(booking.flight_id)
         if not flight:
-             return jsonify({"error": "Associated flight not found."}), 500
+             # This should not happen, but prevents crash
+            return jsonify({"error": "Flight details missing for cancellation."}), 500
 
+        # 1. Update status
         booking.status = 'CANCELLED'
+        
+        # 2. Return the seat (concurrency safe)
         flight.seats_available += 1
+        
         db.session.commit()
 
         return jsonify({
             "message": "Booking successfully cancelled.",
-            "booking": {
-                "pnr": booking.pnr, "status": booking.status,
-                "flight_number": flight.flight_number, "passenger_name": booking.passenger_name
-            }
+            "booking": booking_to_dict(booking)
         }), 200
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Cancellation failed: {e}"}), 500
+        return jsonify({"error": f"Cancellation failed due to a concurrency error or internal issue: {str(e)}"}), 500
 
 
-# --- 9. Main Execution ---
+# --- Run App ---
+
 if __name__ == '__main__':
-    # This 'with' block creates the database tables
-    # if they don't exist. It won't delete existing data.
     with app.app_context():
+        # Ensure database and tables exist
         db.create_all()
     
-    # This starts the web server
-    app.run(debug=True)
-
+    app.run(debug=True, port=5000)
