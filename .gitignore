@@ -1,0 +1,16 @@
+Python
+
+venv/
+pycache/
+*.pyc
+*.pyo
+
+Flask/SQLAlchemy
+
+flights.db
+instance/
+
+Local OS Files
+
+.DS_Store
+Thumbs.db
