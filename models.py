@@ -1,69 +1,52 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
-# Initialize the database extension
+# Initialize SQLAlchemy outside of the app setup
 db = SQLAlchemy()
 
-# --- NEW: User Model ---
+# --- User Model ---
 class User(db.Model):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    name = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    
+    # Relationship to Booking records
+    bookings = db.relationship('Booking', backref='owner', lazy=True)
 
-    # This creates a relationship, so we can do 'user.bookings'
-    # to get all bookings for this user
-    bookings = db.relationship('Booking', backref='user', lazy=True)
-
-    def __repr__(self):
-        return f'<User {self.email}>'
-
-# --- Flight Model (Unchanged) ---
+# --- Flight Model ---
 class Flight(db.Model):
+    __tablename__ = 'flight'
     id = db.Column(db.Integer, primary_key=True)
-    flight_number = db.Column(db.String(20), unique=True, nullable=False)
+    flight_number = db.Column(db.String(20), nullable=False, unique=True)
     origin = db.Column(db.String(100), nullable=False)
     destination = db.Column(db.String(100), nullable=False)
     departure_time = db.Column(db.DateTime, nullable=False)
     arrival_time = db.Column(db.DateTime, nullable=False)
-    base_price = db.Column(db.Float, nullable=False)
+    
+    # Pricing/Inventory
+    base_price = db.Column(db.Float, nullable=False) # Base price in USD
     total_seats = db.Column(db.Integer, nullable=False)
     seats_available = db.Column(db.Integer, nullable=False)
 
-    def __repr__(self):
-        return f'<Flight {self.flight_number}>'
-    
-    # This relationship (backref) is created by the Booking model
-    # We don't need to add 'bookings' here.
-
-# --- Booking Model (UPDATED) ---
+# --- Booking Model (Required for Booking Logic) ---
 class Booking(db.Model):
+    __tablename__ = 'booking'
     id = db.Column(db.Integer, primary_key=True)
     
-    # This 'Foreign Key' links the booking to a specific flight
+    # Foreign Keys
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     flight_id = db.Column(db.Integer, db.ForeignKey('flight.id'), nullable=False)
     
-    # --- NEW: Link to the User ---
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    
-    # Passenger info (we can get this from the user object now,
-    # but we'll keep it for simplicity)
+    # Core Booking Details
+    pnr = db.Column(db.String(6), unique=True, nullable=False)
     passenger_name = db.Column(db.String(100), nullable=False)
-    passenger_email = db.Column(db.String(100), nullable=False)
-    
-    # A unique booking reference, like "AB12CD"
-    pnr = db.Column(db.String(10), unique=True, nullable=False)
-    
-    seat_number = db.Column(db.String(5), nullable=False) # e.g., "12A"
-    price_paid = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(20), nullable=False, default='CONFIRMED') # e.g., CONFIRMED, CANCELLED
-    booking_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    passenger_email = db.Column(db.String(120), nullable=False)
+    seat_number = db.Column(db.String(10), nullable=False)
+    price_paid = db.Column(db.Float, nullable=False) # Raw INR value
+    status = db.Column(db.String(20), default='CONFIRMED', nullable=False)
+    booking_time = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # This relationship lets us do 'booking.flight'
+    # Relationship to Flight details
     flight = db.relationship('Flight', backref=db.backref('bookings', lazy=True))
-    
-    # The 'booking.user' relationship is created by the backref in the User model
-
-    def __repr__(self):
-        return f'<Booking {self.pnr}>'
-

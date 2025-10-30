@@ -3,242 +3,275 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ur Flight Mate - Book Your Trip</title>
+    <title>Ur Flight Mate - Dynamic Booking</title>
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter font for cleaner look -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     
     <style>
-        /* A simple fade-in animation for modals */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.4);
-            animation: fadeIn 0.3s;
+        /* Define Custom Colors */
+        :root {
+            --color-primary-navy: #050F33; /* Deep Navy */
+            --color-accent-teal: #00A389; /* Teal */
         }
-        .modal-content {
-            animation: slideIn 0.3s;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes slideIn {
-            from { transform: translateY(-30px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        /* Custom font */
+        /* Custom font and base styling */
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #F7F8F9; /* Soft Off-White */
         }
-        /* Hide all 'views' by default */
-        .app-view {
-            display: none;
+        /* Style adjustments for Tailwind */
+        .modal {
+            display: none; 
+            position: fixed;
+            z-index: 100;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s;
         }
-        
-        /* Fix for date input placeholder text color */
-        input[type="date"]:invalid::-webkit-calendar-picker-indicator {
-            opacity: 0.6;
-        }
-
-        /* --- NEW: Hide elements based on login state --- */
+        .modal-content { animation: slideIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .app-view { display: none; }
         .logged-in { display: none; }
         .logged-out { display: none; }
-
-        /* --- NEW: Better empty state messages --- */
         .empty-message {
-            text-align: center;
-            font-size: 1.125rem; /* text-lg */
-            color: #4B5563; /* text-gray-600 */
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            font-weight: 500;
+            text-align: center; font-size: 1.125rem; 
+            color: #4B5563; padding: 1rem 0; font-weight: 500;
         }
     </style>
 </head>
-<body class="bg-gray-100 leading-normal tracking-normal">
+<body class="leading-normal tracking-normal">
 
-    <nav class="bg-white p-4 shadow-md sticky top-0 z-50">
+    <!-- ===== NAVIGATION BAR (NAVY) ===== -->
+    <nav class="bg-[--color-primary-navy] p-4 shadow-xl sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-indigo-600 cursor-pointer" onclick="showView('search-view')">Ur Flight Mate</h1>
+            <h1 class="text-3xl font-extrabold text-white cursor-pointer" onclick="showView('search-view')">Ur Flight Mate</h1>
             
+            <!-- Navigation Links -->
             <div class="space-x-4 flex items-center">
-                <button class="logged-in text-lg font-medium text-gray-700 hover:text-indigo-600" onclick="showView('search-view')">Book</button>
-                <button class="logged-in text-lg font-medium text-gray-700 hover:text-indigo-600" onclick="showView('my-flights-view')">Your Flights</button>
-                <span id="nav-user-name" class="logged-in text-gray-500"></span>
-                <button class="logged-in text-lg font-medium text-indigo-600 hover:text-indigo-800" onclick="logoutUser()">Logout</button>
+                <!-- Logged-IN -->
+                <button class="logged-in text-lg font-medium text-blue-200 hover:text-teal-400" onclick="showView('search-view')">Book</button>
+                <button class="logged-in text-lg font-medium text-blue-200 hover:text-teal-400" onclick="loadUserBookings(); showView('my-flights-view')">Your Flights</button>
+                <span id="nav-user-name" class="logged-in text-teal-400 font-semibold"></span>
+                <button class="logged-in text-lg font-medium text-red-400 hover:text-red-500" onclick="logoutUser()">Logout</button>
                 
-                <button class="logged-out text-lg font-medium text-gray-700 hover:text-indigo-600" onclick="showView('login-view')">Login</button>
-                <button class="logged-out text-lg font-medium bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700" onclick="showView('signup-view')">Sign Up</button>
+                <!-- Logged-OUT -->
+                <button class="logged-out text-lg font-medium text-blue-200 hover:text-teal-400" onclick="showView('login-view')">Login</button>
+                <button class="logged-out text-lg font-medium bg-teal-600 text-white py-2 px-4 rounded-lg shadow-md hover:bg-teal-700 transition" onclick="showView('signup-view')">Sign Up</button>
             </div>
         </div>
     </nav>
 
     <main class="container mx-auto p-4 mt-8">
 
+        <!-- ===== VIEW 1: SEARCH (HOME) ===== -->
         <div id="search-view" class="app-view">
-            <div class="bg-indigo-700 text-white rounded-lg shadow-lg p-8 md:p-12 mb-8">
-                <h2 class="text-4xl font-bold mb-4">Book Your Next Flight</h2>
-                <p class="text-xl text-indigo-200 mb-6">Find the best deals with our real-time dynamic pricing engine.</p>
-                <div class="bg-white p-6 rounded-lg shadow-lg">
-                    <form id="search-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        
-                        <div>
-                            <label for="origin-select" class="block text-sm font-medium text-gray-700">Origin</label>
-                            <select id="origin-select" name="origin" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900" required>
-                                <option value="">Select a city...</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label for="destination-select" class="block text-sm font-medium text-gray-700">Destination</label>
-                            <select id="destination-select" name="destination" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900" required>
-                                <option value="">Select a city...</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label for="date" class="block text-sm font-medium text-gray-700">Date</label>
-                            <input type="date" id="date" name="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900" required>
-                        </div>
-                        <div class="flex items-end">
-                            <button type="submit" id="search-button" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                                Search Flights
-                            </button>
-                        </div>
-                    </form>
+            <!-- Hero Section (with Image Placeholder) -->
+            <div class="relative rounded-xl shadow-2xl overflow-hidden mb-8">
+                <img 
+                    src="https://placehold.co/1200x300/104e78/ffffff?text=Coastal+Twilight+Flights" 
+                    onerror="this.onerror=null;this.src='https://placehold.co/1200x300/104e78/ffffff?text=Flight+Search+Banner';" 
+                    alt="A modern image of an airplane over the ocean at sunset."
+                    class="w-full h-72 object-cover"
+                >
+                <div class="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-start p-8 md:p-16">
+                    <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-3 tracking-tight">Prices Change Live. Find Your Best Fare Now.</h2>
+                    <p class="text-xl text-teal-300">Secure your seat before the dynamic pricing engine increases the cost.</p>
                 </div>
+            </div>
+            
+            <!-- Search Form -->
+            <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-200 -mt-20 relative z-10">
+                <form id="search-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    
+                    <div>
+                        <label for="origin-select" class="block text-sm font-semibold text-gray-700">Origin</label>
+                        <select id="origin-select" name="origin" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-gray-900 p-2" required>
+                            <option value="">Select a city...</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="destination-select" class="block text-sm font-semibold text-gray-700">Destination</label>
+                        <select id="destination-select" name="destination" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-gray-900 p-2" required>
+                            <option value="">Select a city...</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="date" class="block text-sm font-semibold text-gray-700">Date</label>
+                        <input type="date" id="date" name="date" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500 text-gray-900 p-2" required>
+                    </div>
+                    
+                    <div class="flex items-end">
+                        <button type="submit" id="search-button" class="w-full bg-teal-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md hover:bg-teal-700 transition focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2">
+                            Search Flights
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
+        <!-- ===== VIEW 2: FLIGHT RESULTS ===== -->
         <div id="results-view" class="app-view">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-3xl font-semibold">Search Results</h2>
-                <button onclick="showView('search-view')" class="text-indigo-600 hover:text-indigo-800 font-medium">&larr; Back to Search</button>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-bold text-gray-800">Available Flights</h2>
+                <button onclick="showView('search-view')" class="text-teal-600 hover:text-teal-800 font-medium transition">&larr; Back to Search</button>
             </div>
             <div id="results-list" class="space-y-4">
-                </div>
+                <!-- Flight results will be injected here by JavaScript -->
+            </div>
             <div id="results-message" class="empty-message"></div>
         </div>
 
+        <!-- ===== VIEW 3: BOOKING CONFIRMATION ===== -->
         <div id="confirmation-view" class="app-view">
-            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-8 rounded-lg shadow-lg">
-                <h2 class="text-3xl font-semibold mb-2">Booking Confirmed!</h2>
-                <p class="text-lg">Your booking is complete. Your Passenger Name Record (PNR) is:</p>
-                <p id="pnr-display" class="text-5xl font-mono font-bold my-4"></p>
+            <div class="bg-teal-50 border-l-4 border-teal-600 text-teal-800 p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+                <h2 class="text-3xl font-extrabold mb-2 flex items-center">
+                    <svg class="w-7 h-7 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                    Booking Confirmed!
+                </h2>
+                <p class="text-lg">Your booking is complete. Your PNR is:</p>
+                <p id="pnr-display" class="text-6xl font-mono font-extrabold my-4 text-teal-700 tracking-wider"></p>
                 <p class="text-lg">This booking has been added to 'Your Flights'.</p>
                 <div class="mt-6 space-x-4">
-                    <button onclick="showView('search-view')" class="bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700">Book Another Flight</button>
-                    <button id="download-receipt-btn" class="bg-gray-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-gray-700">Download Receipt (JSON)</button>
+                    <button onclick="showView('search-view')" class="bg-teal-600 text-white py-2 px-4 rounded-lg shadow-md hover:bg-teal-700 transition">Book Another Flight</button>
+                    <button id="download-receipt-btn" class="bg-gray-600 text-white py-2 px-4 rounded-lg shadow-md hover:bg-gray-700 transition">Download Receipt (JSON)</button>
                 </div>
             </div>
         </div>
         
+        <!-- ===== AUTH VIEWS (Login/Signup) ===== -->
         <div id="login-view" class="app-view">
-            <div id="session-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 max-w-lg mx-auto"></div>
+            <div id="session-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4 max-w-lg mx-auto font-medium"></div>
             
-            <div class="bg-white p-8 rounded-lg shadow-lg max-w-lg mx-auto">
-                <h2 class="text-3xl font-semibold mb-6 text-center">Login</h2>
+            <div class="bg-white p-8 rounded-xl shadow-lg max-w-lg mx-auto border border-gray-200">
+                <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">Login to Ur Flight Mate</h2>
                 <form id="login-form">
-                    <div class="space-y-4">
+                    <div class="space-y-5">
                         <div>
-                            <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
-                            <input type="email" id="login-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900" required>
+                            <label for="login-email" class="block text-sm font-semibold text-gray-700">Email</label>
+                            <input type="email" id="login-email" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm text-gray-900 p-2 focus:border-teal-500 focus:ring-teal-500" required>
                         </div>
                         <div>
-                            <label for="login-password" class="block text-sm font-medium text-gray-700">Password</label>
-                            <input type="password" id="login-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900" required>
+                            <label for="login-password" class="block text-sm font-semibold text-gray-700">Password</label>
+                            <input type="password" id="login-password" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm text-gray-900 p-2 focus:border-teal-500 focus:ring-teal-500" required>
                         </div>
-                        <div id="login-error" class="hidden text-red-600 text-sm"></div>
-                        <button type="submit" id="login-button" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700">
+                        <div id="login-error" class="hidden text-red-500 text-sm font-medium"></div>
+                        <button type="submit" id="login-button" class="w-full bg-teal-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md hover:bg-teal-700 transition">
                             Login
                         </button>
                     </div>
                 </form>
-                <p class="text-center text-gray-600 mt-4">
+                <p class="text-center text-gray-600 mt-6">
                     Don't have an account? 
-                    <button class="text-indigo-600 hover:underline" onclick="showView('signup-view')">Sign Up</button>
+                    <button class="text-teal-600 hover:underline font-semibold" onclick="showView('signup-view')">Sign Up</button>
                 </p>
             </div>
         </div>
         
         <div id="signup-view" class="app-view">
-            <div class="bg-white p-8 rounded-lg shadow-lg max-w-lg mx-auto">
-                <h2 class="text-3xl font-semibold mb-6 text-center">Create Your Account</h2>
+            <div class="bg-white p-8 rounded-xl shadow-lg max-w-lg mx-auto border border-gray-200">
+                <h2 class="text-3xl font-bold mb-6 text-center text-gray-800">Create Your Account</h2>
                 <form id="signup-form">
-                    <div class="space-y-4">
+                    <div class="space-y-5">
                         <div>
-                            <label for="signup-name" class="block text-sm font-medium text-gray-700">Full Name</label>
-                            <input type="text" id="signup-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900" required>
+                            <label for="signup-name" class="block text-sm font-semibold text-gray-700">Full Name</label>
+                            <input type="text" id="signup-name" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm text-gray-900 p-2 focus:border-teal-500 focus:ring-teal-500" required>
                         </div>
                         <div>
-                            <label for="signup-email" class="block text-sm font-medium text-gray-700">Email</label>
-                            <input type="email" id="signup-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900" required>
+                            <label for="signup-email" class="block text-sm font-semibold text-gray-700">Email</label>
+                            <input type="email" id="signup-email" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm text-gray-900 p-2 focus:border-teal-500 focus:ring-teal-500" required>
                         </div>
                         <div>
-                            <label for="signup-password" class="block text-sm font-medium text-gray-700">Password</label>
-                            <input type="password" id="signup-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900" required>
+                            <label for="signup-password" class="block text-sm font-semibold text-gray-700">Password</label>
+                            <input type="password" id="signup-password" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm text-gray-900 p-2 focus:border-teal-500 focus:ring-teal-500" required>
                         </div>
-                        <div id="signup-error" class="hidden text-red-600 text-sm"></div>
-                        <div id="signup-success" class="hidden text-green-600 text-sm"></div>
-                        <button type="submit" id="signup-button" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700">
+                        <div id="signup-error" class="hidden text-red-500 text-sm font-medium"></div>
+                        <div id="signup-success" class="hidden text-teal-600 text-sm font-medium p-2 bg-teal-50 rounded-lg"></div>
+                        <button type="submit" id="signup-button" class="w-full bg-teal-600 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md hover:bg-teal-700 transition">
                             Create Account
                         </button>
                     </div>
                 </form>
-                <p class="text-center text-gray-600 mt-4">
+                <p class="text-center text-gray-600 mt-6">
                     Already have an account? 
-                    <button class="text-indigo-600 hover:underline" onclick="showView('login-view')">Login</button>
+                    <button class="text-teal-600 hover:underline font-semibold" onclick="showView('login-view')">Login</button>
                 </p>
             </div>
         </div>
 
+        <!-- ===== NEW VIEW: MY FLIGHTS ===== -->
         <div id="my-flights-view" class="app-view">
-            <h2 class="text-3xl font-semibold mb-6">Your Booked Flights</h2>
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Your Booked Flights</h2>
             <div id="my-flights-list" class="space-y-4">
-                </div>
+                <!-- User's bookings will be injected here -->
+            </div>
             <div id="my-flights-message" class="empty-message"></div>
         </div>
     </main>
     
-    <footer class="text-center p-4 mt-12 text-gray-500">
-        &copy; 2025 Ur Flight Mate. All rights reserved.
+    <footer class="text-center p-4 mt-12 text-gray-500 bg-white shadow-inner">
+        &copy; 2025 Vidzai Digital. All rights reserved.
     </footer>
 
+    <!-- ===== MODAL 1: BOOKING POPUP (Price Transparency Focus) ===== -->
     <div id="booking-modal" class="modal">
-        <div class="modal-content bg-white p-6 rounded-lg shadow-lg max-w-lg mx-auto mt-20">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-semibold">Confirm Your Booking</h2>
-                <button onclick="closeModal('booking-modal')" class="text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+        <div class="modal-content bg-white p-8 rounded-xl shadow-2xl max-w-xl mx-auto mt-20">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Confirm Your Booking</h2>
+                <button onclick="closeModal('booking-modal')" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
             </div>
             
-            <div id="modal-flight-details" class="mb-4 p-4 bg-gray-50 rounded-md">
-                <p><strong>Flight:</strong> <span id="modal-flight-number"></span></p>
-                <p><span id="modal-origin"></span> &rarr; <span id="modal-destination"></span></p>
-                <p><strong>Price:</strong> <span id="modal-price" class="text-xl font-bold text-indigo-600"></span></p>
+            <div id="modal-flight-details" class="mb-5 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p class="text-lg font-semibold text-gray-700">Flight: <span id="modal-flight-number"></span></p>
+                <p class="text-sm text-gray-500"><span id="modal-origin"></span> &rarr; <span id="modal-destination"></span></p>
             </div>
             
-            <p class="text-gray-700 mb-4">You are booking as: <strong id="modal-user-name"></strong></p>
+            <!-- NEW: Price Breakdown Section -->
+            <div class="space-y-3 mb-6">
+                <h3 class="text-xl font-bold text-gray-800 border-b pb-2">Price Breakdown (INR)</h3>
+                
+                <div id="price-breakdown-details" class="space-y-2">
+                    <!-- Breakdown components injected here -->
+                </div>
+
+                <div class="flex justify-between items-center pt-3 border-t border-dashed border-gray-300">
+                    <p class="text-2xl font-extrabold text-teal-600">TOTAL CURRENT FARE:</p>
+                    <p id="modal-final-price" class="text-2xl font-extrabold text-teal-600"></p>
+                </div>
+            </div>
+            <!-- END: Price Breakdown Section -->
+            
+            <p class="text-gray-700 mb-4 text-sm">Booking as: <strong id="modal-user-name" class="text-gray-900"></strong></p>
 
             <form id="booking-form">
                 <input type="hidden" id="modal-flight-id">
                 <div class="space-y-4">
+                    <!-- Cabin Class (Placeholder for future update) -->
                     <div>
-                        <label for="seat-select" class="block text-sm font-medium text-gray-700">Select Seat</label>
-                        <select id="seat-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900" required>
+                        <label for="class-select" class="block text-sm font-semibold text-gray-700">Select Cabin Class</label>
+                        <select id="class-select" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm text-gray-900 p-2 focus:border-teal-500 focus:ring-teal-500">
+                            <option value="Economy" selected>Economy</option>
+                            <option value="Business" disabled>Business (Not Implemented)</option>
+                        </select>
+                    </div>
+
+                    <!-- Seat Dropdown Menu -->
+                    <div>
+                        <label for="seat-select" class="block text-sm font-semibold text-gray-700">Select Seat</label>
+                        <select id="seat-select" class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm text-gray-900 p-2 focus:border-teal-500 focus:ring-teal-500" required>
                             <option value="" disabled selected>Choose a seat...</option>
                         </select>
                     </div>
                     
-                    <div id="booking-error" class="hidden text-red-600 text-sm"></div>
-                    <button type="submit" id="confirm-booking-button" class="w-full bg-green-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-green-700">
+                    <div id="booking-error" class="hidden text-red-500 text-sm font-medium p-3 bg-red-100 rounded-lg"></div>
+                    <button type="submit" id="confirm-booking-button" class="w-full bg-teal-600 text-white font-extrabold py-3 px-4 rounded-lg shadow-xl hover:bg-teal-700 transition">
                         Confirm & Pay
                     </button>
                 </div>
@@ -246,6 +279,7 @@
         </div>
     </div>
 
+    <!-- ===== MODAL 2: MANAGE BOOKING (for 'My Flights') ===== -->
     <div id="manage-modal" class="modal">
         <div class="modal-content bg-white p-6 rounded-lg shadow-lg max-w-lg mx-auto mt-20">
             <div class="flex justify-between items-center mb-4">
@@ -254,16 +288,17 @@
             </div>
             
             <div id="manage-modal-body" class="space-y-3">
-                </div>
+                <!-- Booking details will be injected here -->
+            </div>
 
             <div id="manage-modal-error" class="hidden text-red-600 text-sm mt-4"></div>
-            <div id="manage-modal-success" class="hidden text-green-600 text-sm mt-4"></div>
+            <div id="manage-modal-success" class="hidden text-teal-600 text-sm mt-4"></div>
 
             <div id="manage-modal-actions" class="mt-6 flex space-x-4">
-                 <button id="cancel-booking-btn" class="w-full bg-red-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-red-700">
+                 <button id="cancel-booking-btn" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-red-700 transition">
                     Cancel Booking
                 </button>
-                 <button id="download-manage-receipt-btn" class="w-full bg-gray-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-gray-700">
+                 <button id="download-manage-receipt-btn" class="w-full bg-gray-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-gray-700 transition">
                     Download Receipt (JSON)
                 </button>
             </div>
@@ -271,11 +306,11 @@
     </div>
 
 
+    <!-- ===== JAVASCRIPT LOGIC ===== -->
     <script>
         // --- Globals ---
         const API_BASE_URL = 'http://127.0.0.1:5000';
         
-        // --- NEW: City list for dropdowns ---
         const CITIES = [
             "New York (JFK)", "Los Angeles (LAX)", "Chicago (ORD)", "Miami (MIA)",
             "San Francisco (SFO)", "Boston (BOS)", "London (LHR)", "Tokyo (NRT)",
@@ -283,40 +318,28 @@
             "Bangalore (BLR)", "Kolkata (CCU)"
         ];
         
-        // Views
+        // Views & Elements
         const views = document.querySelectorAll('.app-view');
-        
-        // Search
         const searchForm = document.getElementById('search-form');
         const searchButton = document.getElementById('search-button');
         const resultsList = document.getElementById('results-list');
         const resultsMessage = document.getElementById('results-message');
         const originSelect = document.getElementById('origin-select');
         const destinationSelect = document.getElementById('destination-select');
-        
-        // Booking Modal
         const bookingModal = document.getElementById('booking-modal');
         const bookingForm = document.getElementById('booking-form');
         const bookingError = document.getElementById('booking-error');
         const confirmBookingButton = document.getElementById('confirm-booking-button');
-        const seatSelect = document.getElementById('seat-select'); // --- NEW ELEMENT ---
-
-        // Manage Modal (for 'My Flights')
+        const seatSelect = document.getElementById('seat-select');
+        const priceBreakdownDetails = document.getElementById('price-breakdown-details'); // NEW ELEMENT
+        
         const manageModal = document.getElementById('manage-modal');
         const cancelBookingButton = document.getElementById('cancel-booking-btn');
         const downloadManageReceiptBtn = document.getElementById('download-manage-receipt-btn');
-        
-        // Confirmation
         const downloadReceiptBtn = document.getElementById('download-receipt-btn');
-        
-        // Auth
-        const loginForm = document.getElementById('login-form');
-        const signupForm = document.getElementById('signup-form');
         const loggedInElements = document.querySelectorAll('.logged-in');
         const loggedOutElements = document.querySelectorAll('.logged-out');
-        const sessionError = document.getElementById('session-error'); // --- NEW ELEMENT ---
-
-        // 'My Flights' View
+        const sessionError = document.getElementById('session-error'); 
         const myFlightsList = document.getElementById('my-flights-list');
         const myFlightsMessage = document.getElementById('my-flights-message');
 
@@ -326,6 +349,67 @@
         let currentUser = null;
         let jwtToken = null;
         
+        // --- NEW UTILITY: INR Formatting ---
+        function formatPriceINR(amount) {
+            // Check if the amount is already a formatted string (like for existing bookings)
+            if (typeof amount === 'string' && amount.startsWith('₹')) {
+                return amount;
+            }
+            // Use Intl.NumberFormat for proper Indian comma grouping (lakhs)
+            // Use Math.round to handle possible float issues before display
+            const roundedAmount = Math.round(amount); 
+            return '₹' + new Intl.NumberFormat('en-IN').format(roundedAmount);
+        }
+
+        // --- NEW UTILITY: Price Breakdown Logic ---
+        function buildPriceBreakdown(breakdown) {
+            priceBreakdownDetails.innerHTML = ''; // Clear previous content
+
+            // 1. Base Fare
+            priceBreakdownDetails.innerHTML += `
+                <div class="flex justify-between font-semibold text-gray-900 border-b border-gray-200 pb-1">
+                    <span>Base Fare:</span>
+                    <span>${formatPriceINR(breakdown.base_price_inr)}</span>
+                </div>
+            `;
+
+            const surcharges = breakdown.surcharges;
+            
+            // 2. Date Proximity Surcharge
+            if (surcharges.date_proximity_surcharge > 0) {
+                priceBreakdownDetails.innerHTML += `
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span>+ Surcharge (Date Proximity):</span>
+                        <span class="font-medium text-red-500">${formatPriceINR(surcharges.date_proximity_surcharge)}</span>
+                    </div>
+                    <p class="text-xs text-right text-red-500 -mt-1">Reason: Booking within 30 days of departure.</p>
+                `;
+            }
+
+            // 3. Occupancy Surcharge
+            if (surcharges.occupancy_surcharge > 0) {
+                priceBreakdownDetails.innerHTML += `
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span>+ Surcharge (High Occupancy):</span>
+                        <span class="font-medium text-red-500">${formatPriceINR(surcharges.occupancy_surcharge)}</span>
+                    </div>
+                    <p class="text-xs text-right text-red-500 -mt-1">Reason: Flight is nearly full (High Demand).</p>
+                `;
+            }
+
+            // 4. Class Premium Surcharge (Simulation)
+            if (surcharges.class_premium > 0) {
+                priceBreakdownDetails.innerHTML += `
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span>+ Class Premium (Simulated):</span>
+                        <span class="font-medium text-gray-700">${formatPriceINR(surcharges.class_premium)}</span>
+                    </div>
+                    <p class="text-xs text-right text-gray-500 -mt-1">Reason: Standard Premium for selected cabin class.</p>
+                `;
+            }
+        }
+
+
         // --- 1. VIEW & AUTH MANAGEMENT ---
         
         function showView(viewId) {
@@ -335,22 +419,18 @@
                 viewToShow.style.display = 'block';
             }
             
-            // Special logic for views that need data
             if (viewId === 'my-flights-view') {
                 loadUserBookings();
             }
-            // Hide session error on view change
             sessionError.classList.add('hidden');
         }
         
         function updateNavUI() {
             if (currentUser && jwtToken) {
-                // User is LOGGED IN
                 loggedInElements.forEach(el => el.style.display = 'inline-block');
                 loggedOutElements.forEach(el => el.style.display = 'none');
                 document.getElementById('nav-user-name').textContent = `Hi, ${currentUser.name}`;
             } else {
-                // User is LOGGED OUT
                 loggedInElements.forEach(el => el.style.display = 'none');
                 loggedOutElements.forEach(el => el.style.display = 'inline-block');
             }
@@ -363,17 +443,13 @@
             localStorage.removeItem('userData');
             updateNavUI();
             
-            // Show message on login screen
             sessionError.textContent = message;
             sessionError.classList.remove('hidden');
             showView('login-view');
         }
         
-        // --- NEW: Function to populate dropdowns ---
         function populateCityDropdowns() {
-            // Sort cities alphabetically
             CITIES.sort();
-            
             CITIES.forEach(city => {
                 const originOption = document.createElement('option');
                 originOption.value = city;
@@ -387,25 +463,18 @@
             });
         }
         
-        // --- NEW: Function to generate seat options (ADDED IMPLEMENTATION) ---
         function populateSeatDropdown(seatsAvailable) {
-            // Clear existing options, keeping the default disabled one
             seatSelect.innerHTML = '<option value="" disabled selected>Choose a seat...</option>';
 
-            const totalRows = 20; // Assume max 20 rows
+            const totalRows = 20; 
             const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
             
-            // Generate a pool of possible seats
             let allSeats = [];
             for (let i = 1; i <= totalRows; i++) {
                 for (const letter of letters) {
                     allSeats.push(`${i}${letter}`);
                 }
             }
-
-            // Since we don't know *which* seats are booked, we just fill 
-            // the dropdown with options equal to the number of seats available.
-            // In a real app, this would be a check against the Booking table.
             
             const shuffledSeats = allSeats.sort(() => 0.5 - Math.random());
             const availableSeats = shuffledSeats.slice(0, seatsAvailable);
@@ -420,10 +489,8 @@
 
 
         document.addEventListener('DOMContentLoaded', () => {
-            // --- NEW: Populate dropdowns on load ---
             populateCityDropdowns();
             
-            // Check if user is already logged in from localStorage
             const storedToken = localStorage.getItem('jwtToken');
             const storedUser = localStorage.getItem('userData');
             
@@ -434,10 +501,9 @@
                 showView('search-view');
             } else {
                 updateNavUI();
-                showView('login-view'); // Start on login page if not logged in
+                showView('login-view'); 
             }
             
-            // Set default date to today
             const today = new Date();
             const yyyy = today.getFullYear();
             const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -472,13 +538,12 @@
                 const data = await response.json();
                 
                 if (!response.ok) {
-                    signupError.textContent = `Error: ${data.error}`;
+                    signupError.textContent = `Error: ${data.error || 'Failed to create account.'}`;
                     signupError.classList.remove('hidden');
                 } else {
-                    signupSuccess.textContent = 'Account created! Please log in.';
+                    signupSuccess.textContent = 'Account created successfully! Please log in.';
                     signupSuccess.classList.remove('hidden');
                     signupForm.reset();
-                    // Wait 2 seconds and switch to login view
                     setTimeout(() => showView('login-view'), 2000);
                 }
             } catch (error) {
@@ -497,7 +562,7 @@
             loginButton.disabled = true;
             loginButton.textContent = 'Logging in...';
             loginError.classList.add('hidden');
-            sessionError.classList.add('hidden'); // Clear session error too
+            sessionError.classList.add('hidden');
 
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
@@ -511,14 +576,12 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    loginError.textContent = `Error: ${data.error}`;
+                    loginError.textContent = `Error: ${data.error || 'Invalid credentials.'}`;
                     loginError.classList.remove('hidden');
                 } else {
-                    // LOGIN SUCCESS
                     currentUser = data.user;
                     jwtToken = data.access_token;
                     
-                    // Store session
                     localStorage.setItem('jwtToken', jwtToken);
                     localStorage.setItem('userData', JSON.stringify(currentUser));
                     
@@ -543,12 +606,10 @@
             resultsList.innerHTML = ''; 
             resultsMessage.textContent = '';
             
-            // --- UPDATED: Get value from select ---
             const origin = originSelect.value;
             const destination = destinationSelect.value;
             const date = document.getElementById('date').value;
 
-            // --- NEW: Validation for dropdowns ---
             if (!origin || !destination) {
                 showView('results-view');
                 resultsMessage.textContent = 'Please select both an origin and a destination.';
@@ -567,7 +628,7 @@
             const url = `${API_BASE_URL}/api/flights/search?origin=${origin}&destination=${destination}&date=${date}`;
 
             try {
-                const response = await fetch(url); // No token needed
+                const response = await fetch(url);
                 showView('results-view'); 
 
                 if (response.status === 404) {
@@ -575,7 +636,7 @@
                     resultsMessage.textContent = data.message;
                 } else if (!response.ok) {
                     const data = await response.json();
-                    resultsMessage.textContent = `Error: ${data.error}`;
+                    resultsMessage.textContent = `Error: ${data.error || 'Server error during search.'}`;
                 } else {
                     const flights = await response.json();
                     displayFlights(flights);
@@ -592,7 +653,6 @@
 
         function displayFlights(flights) {
             if (flights.length === 0) {
-                // --- UPDATED: Clearer message ---
                 resultsMessage.textContent = 'No flights were found for this route on this date.';
                 return;
             }
@@ -602,33 +662,42 @@
                 const departure = new Date(flight.departure_time);
                 const arrival = new Date(flight.arrival_time);
                 
+                // Use backend's formatted price
+                const dynamicPrice = flight.dynamic_price_formatted; 
+                const basePrice = flight.base_price_inr_formatted;
+                const seatsLeft = flight.seats_available;
+                
+                // Urgency color logic
+                let seatClass = 'text-gray-600';
+                if (seatsLeft < 20) {
+                    seatClass = 'text-red-500 font-bold';
+                } else if (seatsLeft < 50) {
+                    seatClass = 'text-orange-500 font-semibold';
+                }
+
                 const flightCard = `
-                    <div class="bg-white p-4 rounded-lg shadow-md flex flex-col md:flex-row justify-between items-center">
-                        <div class="mb-4 md:mb-0">
-                            <div class="flex items-center space-x-4">
-                                <span class="text-xl font-bold text-indigo-600">${flight.flight_number}</span>
-                                <div>
-                                    <p class="text-lg font-semibold">${flight.origin} &rarr; ${flight.destination}</p>
-                                    <p class="text-sm text-gray-600">
-                                        ${departure.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
-                                        ${arrival.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                    </p>
-                                </div>
-                            </div>
+                    <div class="bg-white p-5 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-center border border-gray-200 hover:shadow-lg transition duration-200">
+                        <div class="mb-4 md:mb-0 w-full md:w-2/5">
+                            <p class="text-lg font-bold text-[--color-primary-navy]">${flight.flight_number}</p>
+                            <p class="text-xl font-semibold text-gray-800">${flight.origin} &rarr; ${flight.destination}</p>
+                            <p class="text-sm text-gray-600 font-medium">
+                                ${departure.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
+                                ${arrival.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </p>
                         </div>
-                        <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+                        <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-8 w-full md:w-3/5 justify-end">
                             <div class="text-center md:text-right">
-                                <p class="text-2xl font-bold text-indigo-600">$${flight.dynamic_price} <span class="text-xs font-normal text-indigo-400">Current Fare</span></p>
-                                <p class="text-sm text-gray-500 line-through">$${flight.base_price} (Base)</p>
-                                <p class="text-sm font-medium ${flight.seats_available < 20 ? 'text-red-600' : 'text-green-600'}">
-                                    ${flight.seats_available} seats left
+                                <p class="text-3xl font-extrabold text-teal-600">${dynamicPrice}</p>
+                                <p class="text-xs text-gray-500 line-through">${basePrice} (Base)</p>
+                                <p class="text-sm font-semibold ${seatClass}">
+                                    ${seatsLeft} seats left
                                 </p>
                             </div>
                             <button 
                                 onclick="openBookingModal(${flight.id})" 
-                                class="w-full md:w-auto bg-green-600 text-white py-2 px-6 rounded-md shadow-sm hover:bg-green-700 disabled:opacity-50"
-                                ${flight.seats_available === 0 ? 'disabled' : ''}>
-                                ${flight.seats_available === 0 ? 'Sold Out' : 'Book Now'}
+                                class="w-full md:w-auto bg-teal-600 text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-teal-700 transition disabled:opacity-50"
+                                ${seatsLeft === 0 ? 'disabled' : ''}>
+                                ${seatsLeft === 0 ? 'Sold Out' : 'Book Now'}
                             </button>
                         </div>
                     </div>
@@ -637,10 +706,8 @@
             });
         }
         
-        // --- NEW UTILITY: Handle Auth Error (401) ---
         function handleAuthError(responseStatus) {
             if (responseStatus === 401) {
-                // If the token is invalid or expired, log the user out gracefully
                 logoutUser();
                 return true; 
             }
@@ -651,7 +718,6 @@
         
         function openBookingModal(flightId) {
             if (!currentUser) {
-                // User is logged out, redirect them to login page to see the session error message
                 logoutUser("Please log in to book a flight.");
                 return;
             }
@@ -661,10 +727,12 @@
             document.getElementById('modal-flight-number').textContent = flight.flight_number;
             document.getElementById('modal-origin').textContent = flight.origin;
             document.getElementById('modal-destination').textContent = flight.destination;
-            document.getElementById('modal-price').textContent = `$${flight.dynamic_price}`;
             document.getElementById('modal-user-name').textContent = currentUser.name;
             
-            // --- NEW: Populate seat dropdown (This was the fix!) ---
+            // Set Final Price and Breakdown
+            document.getElementById('modal-final-price').textContent = flight.dynamic_price_formatted;
+            buildPriceBreakdown(flight.price_breakdown); // Build the transparent table
+
             populateSeatDropdown(flight.seats_available); 
 
             bookingError.classList.add('hidden');
@@ -695,16 +763,23 @@
             confirmBookingButton.textContent = 'Processing...';
             bookingError.classList.add('hidden');
 
-            // --- NEW: Check for JWT Token before attempting network call ---
             if (!jwtToken) {
                 logoutUser("Your login session has ended. Please log in before confirming your booking.");
                 return;
             }
 
-            const flightId = document.getElementById('modal-flight-id').value;
+            const flightIdInput = document.getElementById('modal-flight-id').value;
+            const flightId = parseInt(flightIdInput);
             const seatNumber = seatSelect.value;
             
-            // --- Input validation for seat dropdown ---
+            if (isNaN(flightId) || flightIdInput === '') {
+                bookingError.textContent = "Error: Invalid flight ID. Please try searching again.";
+                bookingError.classList.remove('hidden');
+                confirmBookingButton.disabled = false;
+                confirmBookingButton.textContent = 'Confirm & Pay';
+                return;
+            }
+
             if (!seatNumber) {
                 bookingError.textContent = "Please select a seat number.";
                 bookingError.classList.remove('hidden');
@@ -714,7 +789,7 @@
             }
 
             const bookingData = {
-                flight_id: parseInt(flightId),
+                flight_id: flightId,
                 seat_number: seatNumber
             };
 
@@ -728,12 +803,10 @@
                     body: JSON.stringify(bookingData),
                 });
                 
-                // --- UPDATED: Check for 401 using new utility ---
                 if (handleAuthError(response.status)) {
                     return;
                 }
                 
-                // --- UPDATED: Robust Error Handling (Read as text first for bad status, then parse) ---
                 const responseText = await response.text();
                 
                 if (!response.ok) {
@@ -742,7 +815,6 @@
                         const errorData = JSON.parse(responseText);
                         errorMessage = `Booking Failed: ${errorData.error || responseText}`;
                     } catch (jsonError) {
-                        // If it's not JSON, it's probably a server crash page
                         errorMessage = `Booking Failed: Server Error (Status ${response.status} - ${response.statusText}). Is app.py running?`;
                         console.error("Server returned non-JSON error:", responseText);
                     }
@@ -752,13 +824,11 @@
                     confirmBookingButton.disabled = false;
                     confirmBookingButton.textContent = 'Confirm & Pay';
                 } else {
-                    // Booking SUCCESS (must parse JSON now)
                     const data = JSON.parse(responseText);
                     showConfirmationPage(data.booking);
                 }
             } catch (error) {
-                // --- UPDATED: Clearer Network Error message ---
-                bookingError.textContent = `Network Error: Could not connect to the server (Is app.py running and accessible?).`;
+                bookingError.textContent = `Network Error: Could not connect to the server.`;
                 bookingError.classList.remove('hidden');
                 console.error('Booking Error:', error);
                 confirmBookingButton.disabled = false;
@@ -770,12 +840,11 @@
         
         function showConfirmationPage(booking) {
             closeModal('booking-modal');
-            lastBooking = booking; // Store for receipt download
+            lastBooking = booking; 
             
             document.getElementById('pnr-display').textContent = booking.pnr;
             showView('confirmation-view');
             
-            // Hook up the download button
             downloadReceiptBtn.onclick = () => downloadFullReceipt(booking.pnr);
         }
 
@@ -795,7 +864,7 @@
                     headers: { 'Authorization': `Bearer ${jwtToken}` }
                 });
                 
-                if (handleAuthError(response.status)) { // Check for 401
+                if (handleAuthError(response.status)) {
                     return;
                 }
                 
@@ -805,7 +874,6 @@
                     myFlightsMessage.textContent = `Error: ${data.error}`;
                 } else {
                     if (data.length === 0) {
-                        // --- UPDATED: Clearer message ---
                         myFlightsMessage.textContent = "You don't have any booked flights yet.";
                     } else {
                         myFlightsMessage.textContent = '';
@@ -821,23 +889,26 @@
         function displayUserBookings(bookings) {
             bookings.forEach(booking => {
                 const departure = new Date(booking.departure_time);
+                
+                const statusClass = booking.status === 'CONFIRMED' ? 'text-teal-600 bg-teal-100' : 'text-red-600 bg-red-100';
+                
                 const bookingCard = `
-                    <div id="booking-card-${booking.pnr}" class="bg-white p-4 rounded-lg shadow-md">
+                    <div id="booking-card-${booking.pnr}" class="bg-white p-5 rounded-xl shadow-md border border-gray-200">
                         <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
                             <div class="mb-4 md:mb-0">
-                                <p class="text-sm text-gray-500">PNR: <span class="font-mono font-bold text-gray-800">${booking.pnr}</span></p>
-                                <p class="text-xl font-semibold">${booking.origin} &rarr; ${booking.destination}</p>
-                                <p class="text-gray-700">${booking.flight_number} - Seat ${booking.seat_number}</p>
-                                <p class="text-sm text-gray-600">Departs: ${departure.toLocaleString()}</p>
+                                <p class="text-xs text-gray-500">PNR: <span class="font-mono font-bold text-gray-800">${booking.pnr}</span></p>
+                                <p class="text-xl font-semibold text-gray-800">${booking.origin} &rarr; ${booking.destination}</p>
+                                <p class="text-gray-700 text-sm">${booking.flight_number} / Seat ${booking.seat_number}</p>
+                                <p class="text-xs text-gray-600">Departs: ${departure.toLocaleString()}</p>
                             </div>
                             <div class="flex flex-col items-stretch md:items-end w-full md:w-auto space-y-2">
                                 <div class="text-left md:text-right">
-                                    <span id="booking-status-${booking.pnr}" class="text-lg font-bold ${booking.status === 'CONFIRMED' ? 'text-green-600' : 'text-red-600'}">
+                                    <span id="booking-status-${booking.pnr}" class="text-sm font-bold ${statusClass} py-1 px-3 rounded-full inline-block">
                                         ${booking.status}
                                     </span>
-                                    <p class="text-lg font-semibold">$${booking.price_paid}</p>
+                                    <p class="text-xl font-extrabold text-teal-600 mt-1">${booking.price_paid}</p>
                                 </div>
-                                <button onclick="openManageModal('${booking.pnr}')" class="bg-indigo-600 text-white py-2 px-4 rounded-md shadow-sm hover:bg-indigo-700">
+                                <button onclick="openManageModal('${booking.pnr}')" class="bg-gray-800 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-gray-700 transition">
                                     Manage
                                 </button>
                             </div>
@@ -850,20 +921,18 @@
         
         async function openManageModal(pnr) {
             const modalBody = document.getElementById('manage-modal-body');
-            modalBody.innerHTML = '<p>Loading details...</p>';
+            modalBody.innerHTML = '<p class="text-gray-500">Loading details...</p>';
             manageModal.style.display = 'block';
 
-            // Clear messages
             document.getElementById('manage-modal-error').classList.add('hidden');
             document.getElementById('manage-modal-success').classList.add('hidden');
 
             try {
-                // Fetch the single booking details
                 const response = await fetch(`${API_BASE_URL}/api/bookings/${pnr}`, {
                     headers: { 'Authorization': `Bearer ${jwtToken}` }
                 });
                 
-                if (handleAuthError(response.status)) { // Check for 401
+                if (handleAuthError(response.status)) {
                     closeModal('manage-modal');
                     return;
                 }
@@ -871,27 +940,26 @@
                 const booking = await response.json();
 
                 if (!response.ok) {
-                    modalBody.innerHTML = `<p class="text-red-600">Error: ${booking.error}</p>`;
+                    modalBody.innerHTML = `<p class="text-red-500 font-medium">Error: ${booking.error}</p>`;
                     return;
                 }
 
-                // Store for cancellation/download
                 let currentManagedBooking = booking; 
                 const departure = new Date(booking.departure_time);
-                
+                const statusClass = booking.status === 'CONFIRMED' ? 'text-teal-600' : 'text-red-500';
+
                 modalBody.innerHTML = `
-                    <p><strong>PNR:</strong> <span class="font-mono font-bold">${booking.pnr}</span></p>
-                    <p><strong>Status:</strong> <span id="manage-status" class="font-medium ${booking.status === 'CONFIRMED' ? 'text-green-600' : 'text-red-600'}">${booking.status}</span></p>
-                    <hr class="my-3">
-                    <p><strong>Passenger:</strong> ${booking.passenger_name}</p>
-                    <p><strong>Email:</strong> ${booking.passenger_email}</p>
-                    <p><strong>Flight:</strong> ${booking.flight_number} (${booking.origin} &rarr; ${booking.destination})</p>
-                    <p><strong>Departs:</strong> ${departure.toLocaleString()}</p>
-                    <p><strong>Seat:</strong> ${booking.seat_number}</p>
-                    <p><strong>Price Paid:</strong> $${booking.price_paid}</p>
+                    <p class="text-sm"><strong>PNR:</strong> <span class="font-mono font-bold text-gray-800">${booking.pnr}</span></p>
+                    <p class="text-sm"><strong>Status:</strong> <span id="manage-status" class="font-extrabold ${statusClass}">${booking.status}</span></p>
+                    <hr class="my-3 border-gray-200">
+                    <p class="text-sm"><strong>Passenger:</strong> ${booking.passenger_name}</p>
+                    <p class="text-sm"><strong>Email:</strong> ${booking.passenger_email}</p>
+                    <p class="text-sm"><strong>Flight:</strong> ${booking.flight_number} (${booking.origin} &rarr; ${booking.destination})</p>
+                    <p class="text-sm"><strong>Departs:</strong> ${departure.toLocaleString()}</p>
+                    <p class="text-sm"><strong>Seat:</strong> ${booking.seat_number}</p>
+                    <p class="text-xl pt-2"><strong>Price Paid:</strong> <span class="font-extrabold text-teal-600">${booking.price_paid}</span></p>
                 `;
                 
-                // Show/hide cancel button
                 if (booking.status === 'CONFIRMED') {
                     cancelBookingButton.style.display = 'block';
                     cancelBookingButton.disabled = false;
@@ -900,14 +968,11 @@
                     cancelBookingButton.style.display = 'none';
                 }
                 
-                // Hook up download button
                 downloadManageReceiptBtn.onclick = () => downloadJSON(currentManagedBooking, `Booking-${currentManagedBooking.pnr}.json`);
-                
-                // Hook up cancel button (must re-hook every time)
                 cancelBookingButton.onclick = () => handleCancelBooking(pnr);
                 
             } catch (error) {
-                modalBody.innerHTML = `<p class="text-red-600">Network Error: ${error.message}</p>`;
+                modalBody.innerHTML = `<p class="text-red-500 font-medium">Network Error: ${error.message}</p>`;
             }
         }
 
@@ -928,7 +993,7 @@
                     headers: { 'Authorization': `Bearer ${jwtToken}` } 
                 });
                 
-                if (handleAuthError(response.status)) { // Check for 401
+                if (handleAuthError(response.status)) {
                     closeModal('manage-modal');
                     return;
                 }
@@ -941,18 +1006,25 @@
                     cancelBookingButton.disabled = false;
                     cancelBookingButton.textContent = 'Cancel Booking';
                 } else {
-                    // Success! Update the UI in the modal AND the list behind it
                     successMsg.textContent = 'Booking successfully cancelled.';
                     successMsg.classList.remove('hidden');
-                    document.getElementById('manage-status').textContent = 'CANCELLED';
-                    document.getElementById('manage-status').classList.remove('text-green-600');
-                    document.getElementById('manage-status').classList.add('text-red-600');
+                    
+                    const manageStatus = document.getElementById('manage-status');
+                    if(manageStatus) {
+                        manageStatus.textContent = 'CANCELLED';
+                        manageStatus.classList.remove('text-teal-600');
+                        manageStatus.classList.add('text-red-500');
+                    }
+                    
                     cancelBookingButton.style.display = 'none';
                     
-                    // Update the 'My Flights' list in the background
-                    document.getElementById(`booking-status-${pnr}`).textContent = 'CANCELLED';
-                    document.getElementById(`booking-status-${pnr}`).classList.remove('text-green-600');
-                    document.getElementById(`booking-status-${pnr}`).classList.add('text-red-600');
+                    const bookingStatusList = document.getElementById(`booking-status-${pnr}`);
+                    if(bookingStatusList) {
+                        bookingStatusList.textContent = 'CANCELLED';
+                        bookingStatusList.classList.remove('text-teal-600', 'bg-teal-100');
+                        bookingStatusList.classList.add('text-red-600', 'bg-red-100');
+                    }
+                    loadUserBookings(); // Refresh the parent list
                 }
             } catch (error) {
                 errorMsg.textContent = 'Network Error. Could not connect to server.';
@@ -965,26 +1037,23 @@
         // --- 7. UTILITY FUNCTIONS (Download JSON) ---
         
         async function downloadFullReceipt(pnr) {
-            // We fetch the full details first to make sure the receipt is accurate
             try {
                 const response = await fetch(`${API_BASE_URL}/api/bookings/${pnr}`, {
                     headers: { 'Authorization': `Bearer ${jwtToken}` }
                 });
                 
-                if (handleAuthError(response.status)) { // Check for 401
+                if (handleAuthError(response.status)) {
                     return;
                 }
                 
                 const bookingData = await response.json();
                 
                 if (!response.ok) {
-                    // Keeping alert here for simple feedback on a non-core failure
                     alert(`Error fetching receipt: ${bookingData.error}`); 
                 } else {
                     downloadJSON(bookingData, `Booking-${pnr}.json`);
                 }
             } catch (error) {
-                // Keeping alert here for simple feedback on a non-core failure
                 alert(`Network error fetching receipt: ${error.message}`); 
             }
         }

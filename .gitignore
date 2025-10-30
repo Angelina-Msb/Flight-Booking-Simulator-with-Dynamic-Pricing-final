@@ -1,16 +1,12 @@
-Python
-
+# Python
+__pycache__/
 venv/
-pycache/
 *.pyc
-*.pyo
 
-Flask/SQLAlchemy
+# Node
+node_modules/
 
-flights.db
+# Flask/SQLAlchemy
 instance/
-
-Local OS Files
-
-.DS_Store
-Thumbs.db
+*.db
+*.sqlite3
